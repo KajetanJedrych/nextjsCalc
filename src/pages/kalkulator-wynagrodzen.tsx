@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FormControl, InputLabel, Select, MenuItem, TextField, Checkbox, FormControlLabel,Button,Table,TableBody,TableCell,TableContainer,TableHead,TableRow,Paper,Box,Typography,Tab,Tabs } from '@mui/material';
+import { FormControl, InputLabel, Select, MenuItem, TextField, Checkbox, FormControlLabel, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Box, Typography, Tab, Tabs, SelectChangeEvent } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 
@@ -55,9 +56,9 @@ const SalaryCalculator = () => {
   // Colors for the pie chart
   const COLORS = ['#4CAF50', '#FF6B6B', '#4A4E69', '#FFD166', '#06D6A0', '#118AB2', '#F79824'];
 
-  //const handleSalaryTypeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
-    //setGrossOrNet(event.target.value as string);
-  //};
+  const handleSalaryTypeChange = (event: SelectChangeEvent) => {
+    setGrossOrNet(event.target.value as string);
+  };
 
   const handleSalaryAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSalaryAmount(parseFloat(event.target.value) || 0);
@@ -339,24 +340,20 @@ const SalaryCalculator = () => {
   return (
     <div className="max-w-6xl mx-auto p-4 bg-gray-50 pt-5">
       {/* Banner */}
-      <Paper elevation={3} sx={{ 
-        width: "80%", 
-        height: "150px", 
-        p: 2, 
-        mb: 3, 
-        mt: 3, 
-        mx: "auto",
-        display: "flex", 
-        justifyContent: "center", 
+      <Box sx={{
+        width: "100%",
+        backgroundColor: "#2185d0",
+        p: 4,
+        mb: 3,
+        display: "flex",
+        justifyContent: "center",
         alignItems: "center",
-        backgroundImage: "linear-gradient(to right, #1976d2, #64b5f6)",
         color: "white",
-        borderRadius: 2
       }}>
-        <Typography variant="h3" component="div" sx={{ fontWeight: "bold" }}>
+        <Typography variant="h3" sx={{ fontWeight: "bold" }}>
           Kalkulator UoP
         </Typography>
-      </Paper>
+      </Box>
       <Box className="mb-8">
         <Typography variant="h4" className="text-gray-800 font-bold mb-2">
           Kalkulator wynagrodzeń {taxYear}
@@ -367,10 +364,11 @@ const SalaryCalculator = () => {
       </Box>
 
       {/* Main form */}
-      <Box className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        <FormControl fullWidth variant="outlined">
-          <InputLabel>Typ wynagrodzenia</InputLabel>
+      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2, mb: 3 }}>
+        <FormControl fullWidth>
+          <InputLabel id="typ-wynagrodzenia-label">Typ wynagrodzenia</InputLabel>
           <Select
+            labelId="typ-wynagrodzenia-label"
             value={grossOrNet}
             onChange={(e) => setGrossOrNet(e.target.value as string)}
             label="Typ wynagrodzenia"
@@ -387,13 +385,14 @@ const SalaryCalculator = () => {
           value={salaryAmount}
           onChange={handleSalaryAmountChange}
           InputProps={{
-            endAdornment: <span className="text-gray-500">PLN</span>
+            endAdornment: <Box component="span" sx={{ ml: 1 }}>PLN</Box>,
           }}
         />
 
-        <FormControl fullWidth variant="outlined">
-          <InputLabel>rok podatkowy</InputLabel>
+        <FormControl fullWidth>
+          <InputLabel id="rok-podatkowy-label">rok podatkowy</InputLabel>
           <Select
+            labelId="rok-podatkowy-label"
             value={taxYear}
             onChange={(e) => setTaxYear(e.target.value as number)}
             label="rok podatkowy"
@@ -405,61 +404,40 @@ const SalaryCalculator = () => {
       </Box>
 
       {/* Options checkboxes */}
-      <Box className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        {/*
-        <div>
-          <FormControlLabel
-            control={
-              <Checkbox 
-                checked={workFromHome}
-                onChange={(e) => setWorkFromHome(e.target.checked)}
-                color="primary"
-              />
-            }
-            label="praca w miejscu zamieszkania"
-          />
-        </div>
-        */ }
-        <div>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
           <FormControlLabel
             control={
               <Checkbox 
                 checked={fgspContribution}
                 onChange={(e) => setFgspContribution(e.target.checked)}
-                color="primary"
               />
             }
             label="składka na FGŚP"
           />
-        </div>
-        <div>
+          
           <FormControlLabel
             control={
               <Checkbox 
                 checked={ppkParticipation}
                 onChange={(e) => setPpkParticipation(e.target.checked)}
-                color="primary"
               />
             }
             label="uczestnictwo w PPK"
           />
-        </div>
-        <div>
+          
           <FormControlLabel
             control={
               <Checkbox 
                 checked={over26}
                 onChange={(e) => setOver26(e.target.checked)}
-                color="primary"
               />
             }
             label="ukończony 26 rok życia"
           />
-        </div>
-      </Box>
+        </Box>
 
       {/* Accident insurance rate */}
-      <Box className="flex gap-2 items-center mb-6">
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
         <Typography variant="body1">
           stopa procentowa składki na ubezpieczenie wypadkowe
         </Typography>
@@ -468,7 +446,7 @@ const SalaryCalculator = () => {
           onChange={(e) => setAccidentInsuranceRate(parseFloat(e.target.value) || 0)}
           variant="outlined"
           size="small"
-          style={{ width: '80px' }}
+          sx={{ width: '80px' }}
           type="number"
           inputProps={{ step: 0.01 }}
         />
@@ -490,13 +468,19 @@ const SalaryCalculator = () => {
       </Box>
 
       {/* Calculate button */}
-      <Box className="flex justify-center mb-8">
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
         <Button 
           variant="contained" 
           onClick={handleCalculate}
-          className="bg-orange-500 hover:bg-orange-600 text-white py-3 px-16"
+          sx={{ 
+            backgroundColor: '#2185d0',
+            '&:hover': { backgroundColor: '#1a75c0' },
+            textTransform: 'uppercase',
+            px: 4,
+            py: 1
+          }}
         >
-          Oblicz
+          OBLICZ
         </Button>
       </Box>
 
@@ -505,19 +489,19 @@ const SalaryCalculator = () => {
         <Box className="border-t border-gray-200 pt-6">
           {/* Summary */}
           <Box className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Box className="flex flex-col">
-              <Typography variant="h6" className="text-2xl text-green-700 font-medium">
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Typography variant="h6" sx={{ fontSize: '1.5rem', color: 'success.main', fontWeight: 500 }}>
                 {calculationResults.netSalary.toLocaleString('pl-PL', { minimumFractionDigits: 2 })} PLN
               </Typography>
               <Typography variant="body2" className="text-gray-600">kwota netto</Typography>
             </Box>
-            <Box className="flex flex-col">
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
               <Typography variant="h6" className="text-2xl text-amber-700 font-medium">
                 {calculationResults.monthlyGross.toLocaleString('pl-PL', { minimumFractionDigits: 2 })} PLN
               </Typography>
               <Typography variant="body2" className="text-gray-600">kwota brutto</Typography>
             </Box>
-            <Box className="flex flex-col">
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
               <Typography variant="h6" className="text-2xl text-gray-700 font-medium">
                 {calculationResults.totalEmployerCost.toLocaleString('pl-PL', { minimumFractionDigits: 2 })} PLN
               </Typography>
@@ -538,7 +522,12 @@ const SalaryCalculator = () => {
 
           {/* Tabs for Employee and Employer costs */}
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-            <Tabs value={activeTab} onChange={handleTabChange} aria-label="calculation tabs">
+          <Tabs 
+            value={activeTab} 
+            onChange={handleTabChange} 
+            aria-label="calculation tabs"
+            TabIndicatorProps={{ sx: { backgroundColor: 'primary.main' } }}
+          >
               <Tab label="Koszty pracownika" />
               {showEmployerCalculation && <Tab label="Koszty pracodawcy" />}
             </Tabs>
@@ -554,7 +543,7 @@ const SalaryCalculator = () => {
                 <TableContainer component={Paper} className="mb-4">
                   <Table>
                     <TableBody>
-                      <TableRow className="bg-green-50">
+                      <TableRow sx={{ backgroundColor: 'success.light' }}>
                         <TableCell>kwota netto</TableCell>
                         <TableCell align="right" className="font-medium">
                           {calculationResults.netSalary.toLocaleString('pl-PL', { minimumFractionDigits: 2 })} PLN
@@ -598,7 +587,7 @@ const SalaryCalculator = () => {
                           </TableCell>
                         </TableRow>
                       )}
-                      <TableRow className="bg-amber-50">
+                      <TableRow sx={{ backgroundColor: 'bg-amber-50' }}>
                         <TableCell>kwota brutto</TableCell>
                         <TableCell align="right" className="font-medium">
                           {calculationResults.monthlyGross.toLocaleString('pl-PL', { minimumFractionDigits: 2 })} PLN
