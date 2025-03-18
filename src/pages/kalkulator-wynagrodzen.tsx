@@ -338,10 +338,29 @@ const SalaryCalculator = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 bg-gray-50 pt-5">
+    <Box 
+        sx={{ 
+          maxWidth: {
+            xs: '100%',      // Full width on extra small screens
+            sm: '540px',     // Small screens
+            md: '720px',     // Medium screens
+            lg: '960px',     // Large screens
+            xl: '1140px'     // Extra large screens
+          },
+          mx: 'auto',
+          p: { xs: 2, sm: 3, md: 4 },
+          bgcolor: 'grey.50'
+        }}
+      >
       {/* Banner */}
       <Box sx={{
-        width: "100%",
+        maxWidth: {
+          xs: '100%',      // Full width on extra small screens
+          sm: '540px',     // Small screens
+          md: '720px',     // Medium screens
+          lg: '960px',     // Large screens
+          xl: '1140px'     // Extra large screens
+        },
         backgroundColor: "#2185d0",
         p: 4,
         mb: 3,
@@ -355,7 +374,7 @@ const SalaryCalculator = () => {
         </Typography>
       </Box>
       <Box className="mb-8">
-        <Typography variant="h4" className="text-gray-800 font-bold mb-2">
+        <Typography variant="h4" sx={{ color: 'text.primary', fontWeight: 'bold', mb: 2 }}>
           Kalkulator wynagrodzeń {taxYear}
         </Typography>
         <Typography variant="subtitle1" className="text-gray-600">
@@ -372,6 +391,7 @@ const SalaryCalculator = () => {
             value={grossOrNet}
             onChange={(e) => setGrossOrNet(e.target.value as string)}
             label="Typ wynagrodzenia"
+            sx={{ width: '100%' }}
           >
             <MenuItem value="brutto">brutto</MenuItem>
             <MenuItem value="netto">netto</MenuItem>
@@ -396,6 +416,7 @@ const SalaryCalculator = () => {
             value={taxYear}
             onChange={(e) => setTaxYear(e.target.value as number)}
             label="rok podatkowy"
+            sx={{ width: '100%' }}
           >
             <MenuItem value={2025}>2025</MenuItem>
             <MenuItem value={2024}>2024</MenuItem>
@@ -469,15 +490,16 @@ const SalaryCalculator = () => {
 
       {/* Calculate button */}
       <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-        <Button 
-          variant="contained" 
+      <Button
+          variant="contained"
           onClick={handleCalculate}
           sx={{ 
             backgroundColor: '#2185d0',
             '&:hover': { backgroundColor: '#1a75c0' },
             textTransform: 'uppercase',
             px: 4,
-            py: 1
+            py: 1,
+            color: 'white'
           }}
         >
           OBLICZ
@@ -526,7 +548,8 @@ const SalaryCalculator = () => {
             value={activeTab} 
             onChange={handleTabChange} 
             aria-label="calculation tabs"
-            TabIndicatorProps={{ sx: { backgroundColor: 'primary.main' } }}
+            TabIndicatorProps={{ sx: { backgroundColor: theme => theme.palette.primary.main } }}
+            sx={{ '& .MuiTab-root': { textTransform: 'none' } }}
           >
               <Tab label="Koszty pracownika" />
               {showEmployerCalculation && <Tab label="Koszty pracodawcy" />}
@@ -543,7 +566,7 @@ const SalaryCalculator = () => {
                 <TableContainer component={Paper} className="mb-4">
                   <Table>
                     <TableBody>
-                      <TableRow sx={{ backgroundColor: 'success.light' }}>
+                      <TableRow sx={{ backgroundColor: theme => theme.palette.success.light }}>
                         <TableCell>kwota netto</TableCell>
                         <TableCell align="right" className="font-medium">
                           {calculationResults.netSalary.toLocaleString('pl-PL', { minimumFractionDigits: 2 })} PLN
@@ -609,7 +632,7 @@ const SalaryCalculator = () => {
                 <Typography variant="h6" className="mb-4">
                   Wykres rozkładu kosztów pracownika
                 </Typography>
-                <Box className="h-80 w-full">
+                <Box sx={{ height: '20rem', width: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -635,7 +658,7 @@ const SalaryCalculator = () => {
 
           {/* Employer costs tab */}
           {activeTab === 1 && showEmployerCalculation && (
-            <Box className="mb-8">
+            <Box sx={{ mb: 8 }}>
               <Typography variant="h6" className="mb-4">
                 Koszty pracodawcy dla miesięcznego wynagrodzenia {calculationResults.monthlyGross.toLocaleString('pl-PL')} PLN brutto
               </Typography>
@@ -786,7 +809,7 @@ const SalaryCalculator = () => {
           Wszystkie dane są obliczane zgodnie z polskim prawem podatkowym na rok {taxYear}.
         </Typography>
       </Box>
-    </div>
+      </Box>
   );
 };
 
