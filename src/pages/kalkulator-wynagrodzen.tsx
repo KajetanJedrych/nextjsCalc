@@ -355,11 +355,11 @@ const SalaryCalculator = () => {
       {/* Banner */}
       <Box sx={{
         maxWidth: {
-          xs: '100%',      // Full width on extra small screens
-          sm: '540px',     // Small screens
-          md: '720px',     // Medium screens
-          lg: '960px',     // Large screens
-          xl: '1140px'     // Extra large screens
+          xs: '100%',      
+          sm: '540px',     
+          md: '720px',     
+          lg: '960px',     
+          xl: '1140px'     
         },
         backgroundColor: "#2185d0",
         p: 4,
