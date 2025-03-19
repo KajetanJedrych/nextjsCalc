@@ -4,6 +4,7 @@ import { Slider, FormControlLabel, Radio, RadioGroup, Select, MenuItem, FormCont
 
 // Define types for the component state
 type ZusType = 'duzy' | 'maly' | 'zdrowie';
+type IncomeFrequency = 'monthly' | 'daily' | 'hourly';
 type Results = {
   general: number;
   linear: number;
@@ -11,13 +12,12 @@ type Results = {
 };
 
 const B2BSalaryCalculator: React.FC = () => {
-  const [monthlyIncome, setMonthlyIncome] = useState<number>(11000);
+  const [income, setIncome] = useState<number>(11000);
+  const [incomeFrequency, setIncomeFrequency] = useState<IncomeFrequency>('monthly');
   const [monthlyCosts, setMonthlyCosts] = useState<number>(1000);
   const [taxRate, setTaxRate] = useState<number>(12);
   const [zusType, setZusType] = useState<ZusType>('maly');
-  const [otherIncome, setOtherIncome] = useState<number>(0);
-  const [children, setChildren] = useState<number>(0);
-  const [jointFiling, setJointFiling] = useState<boolean>(false);
+  const [voluntaryHealthInsurance, setVoluntaryHealthInsurance] = useState<boolean>(false);
   const [showMore, setShowMore] = useState<boolean>(false);
   
   // Results state
@@ -27,29 +27,75 @@ const B2BSalaryCalculator: React.FC = () => {
     flatRate: 0
   });
 
+  // Calculate monthly income based on frequency
+  const calculateMonthlyIncome = (): number => {
+    switch(incomeFrequency) {
+      case 'daily':
+        return income * 22; // Assuming 22 working days per month
+      case 'hourly':
+        return income * 8 * 22; // Assuming 8 hours per day, 22 days per month
+      default:
+        return income;
+    }
+  };
+  const [taxationType, setTaxationType] = useState<string>('scale'); 
+
   // Calculate results
   useEffect(() => {
-    // This is a simplified calculation for demonstration purposes
-    // In a real application, you would implement the actual tax calculations
-    
-    const income = Number(monthlyIncome);
+    const monthlyIncome = calculateMonthlyIncome();
     const costs = Number(monthlyCosts);
-    const profit = income - costs;
+    const profit = monthlyIncome - costs;
     
     // Simplified tax calculations based on the provided information
-    const generalTax = calculateGeneralTax(profit);
-    const linearTax = calculateLinearTax(profit);
-    const flatRateTax = calculateFlatRateTax(income, taxRate);
+    const generalTax = calculateGeneralTax(profit, monthlyIncome, zusType, taxationType);
+    const linearTax = calculateLinearTax(profit, monthlyIncome, zusType, taxationType);
+    const flatRateTax = calculateFlatRateTax(monthlyIncome, taxRate, zusType, taxationType);
     
     setResults({
       general: Math.round(profit - generalTax),
       linear: Math.round(profit - linearTax),
-      flatRate: Math.round(income - flatRateTax)
+      flatRate: Math.round(monthlyIncome - flatRateTax)
     });
-  }, [monthlyIncome, monthlyCosts, taxRate, zusType, otherIncome, children, jointFiling]);
+  }, [income, incomeFrequency, monthlyCosts, taxRate, zusType, voluntaryHealthInsurance]);
+
+  // Calculate ZUS based on type and voluntary insurance
+  const calculateZUS = (income: number, zusType: ZusType, taxationType: string): number => {
+    let zus = 0;
+    let healthInsurance = 0;
+  
+    if (zusType === 'duzy') {
+      // Duży ZUS: składki na ubezpieczenia społeczne (bez zdrowotnej)
+      zus = 1418.48; // Suma składek emerytalnej, rentowej, chorobowej, wypadkowej, FP i FS
+    } else if (zusType === 'maly') {
+      // Mały ZUS: preferencyjne składki społeczne
+      zus = 331.26;
+    }
+  
+    // Składka zdrowotna dla przedsiębiorców na skali podatkowej: min. 381.78 PLN (9% od minimalnego wynagrodzenia)
+    if (taxationType === 'scale') {
+      healthInsurance = Math.max(income * 0.09, 381.78);
+    } else if (taxationType === 'flat') {
+      // Składka zdrowotna na podatku liniowym: 4.9% dochodu, min. 381.78 PLN
+      healthInsurance = Math.max(income * 0.049, 381.78);
+    } else if (taxationType === 'lumpSum') {
+      // Składka zdrowotna dla ryczałtowców zależy od przychodów (progi)
+      if (income <= 60_000) {
+        healthInsurance = 381.78;
+      } else if (income <= 300_000) {
+        healthInsurance = 636.51;
+      } else {
+        healthInsurance = 1145.67;
+      }
+    } else {
+      // Domyślna składka zdrowotna
+      healthInsurance = 381.78;
+    }
+  
+    return zus + healthInsurance;
+  };
 
   // Simplified tax calculation functions
-  const calculateGeneralTax = (profit: number): number => {
+  const calculateGeneralTax = (profit: number, income: number, zusType: ZusType, taxationType: string): number => {
     // Basic progressive tax calculation (12% up to 120k, 32% above)
     // This is highly simplified and doesn't include all deductions and specifics
     const yearlyProfit = profit * 12;
@@ -64,59 +110,38 @@ const B2BSalaryCalculator: React.FC = () => {
     }
     
     // ZUS contribution based on selection
-    let zus = 0;
-    if (zusType === 'duzy') {
-      zus = 1600; // Approximate value
-    } else if (zusType === 'maly') {
-      zus = 800; // Approximate value
-    } else {
-      zus = 400; // Just health insurance
-    }
+    const zus = calculateZUS(income, zusType, taxationType);
     
     return (tax / 12) + zus;
   };
 
-  const calculateLinearTax = (profit: number): number => {
+  const calculateLinearTax = (profit: number, income: number, zusType: ZusType, taxationType: string): number => {
     // 19% flat tax
     const tax = profit * 0.19;
     
     // ZUS contribution based on selection
-    let zus = 0;
-    if (zusType === 'duzy') {
-      zus = 1600;
-    } else if (zusType === 'maly') {
-      zus = 800;
-    } else {
-      zus = 400;
-    }
+    const zus = calculateZUS(income, zusType, taxationType);
     
     return tax + zus;
   };
 
-  const calculateFlatRateTax = (income: number, rate: number): number => {
+  const calculateFlatRateTax = (income: number, rate: number, zusType: ZusType, taxationType: string): number => {
     // Flat rate tax without costs deduction
     const tax = income * (rate / 100);
     
     // ZUS contribution based on selection
-    let zus = 0;
-    if (zusType === 'duzy') {
-      zus = 1600;
-    } else if (zusType === 'maly') {
-      zus = 800;
-    } else {
-      zus = 400;
-    }
+    const zus = calculateZUS(income, zusType, taxationType);
     
     return tax + zus;
   };
 
   // Handle input changes
   const handleIncomeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setMonthlyIncome(Number(event.target.value));
+    setIncome(Number(event.target.value));
   };
 
-  const handleIncomeSliderChange = (_event: Event, newValue: number | number[]) => {
-    setMonthlyIncome(newValue as number);
+  const handleIncomeFrequencyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setIncomeFrequency(event.target.value as IncomeFrequency);
   };
 
   const handleCostsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,8 +152,8 @@ const B2BSalaryCalculator: React.FC = () => {
     setMonthlyCosts(newValue as number);
   };
 
-  const handleTaxRateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setTaxRate(Number(event.target.value));
+  const handleTaxRateChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setTaxRate(parseFloat(event.target.value) || 0);
   };
 
   const handleTaxRateSliderChange = (_event: Event, newValue: number | number[]) => {
@@ -139,19 +164,22 @@ const B2BSalaryCalculator: React.FC = () => {
     setZusType(event.target.value as ZusType);
   };
 
-  const handleOtherIncomeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setOtherIncome(Number(event.target.value));
+  const handleVoluntaryHealthInsuranceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setVoluntaryHealthInsurance(event.target.value === "tak");
   };
 
-  const handleChildrenChange = (event: SelectChangeEvent<number>) => {
-    setChildren(Number(event.target.value));
-  };
-
-  const handleJointFilingChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setJointFiling(event.target.value === "tak");
-  };
-
-  const taxRates = [2, 3, 5.5, 8.5, 12, 12.5, 14, 15, 17];
+  // Tax rate marks with equal spacing
+  const taxRateMarks = [
+    { value: 2, label: '2%' },
+    { value: 3, label: '3%' },
+    { value: 5.5, label: '5.5%' },
+    { value: 8.5, label: '8.5%' },
+    { value: 12, label: '12%' },
+    { value: 12.5, label: '12.5%' },
+    { value: 14, label: '14%' },
+    { value: 15, label: '15%' },
+    { value: 17, label: '17%' }
+  ];
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-gray-50 rounded-lg shadow-md">
@@ -159,31 +187,27 @@ const B2BSalaryCalculator: React.FC = () => {
         <h2 className="text-lg text-gray-500 mb-2">KALKULATOR DZIAŁALNOŚCI GOSPODARCZEJ</h2>
         <h1 className="text-3xl font-bold mb-8">Najkorzystniejsza forma opodatkowania</h1>
         
-        {/* Monthly Income */}
+        {/* Income with frequency selection */}
         <div className="mb-8">
-          <label className="block text-gray-600 mb-2">Twój miesięczny przychód netto</label>
+          <label className="block text-gray-600 mb-2">Twój przychód netto</label>
           <div className="flex items-center">
             <input
               type="number"
-              value={monthlyIncome}
+              value={income}
               onChange={handleIncomeChange}
               className="w-32 p-3 border border-gray-300 rounded-md mr-3"
             />
             <span className="mr-4">zł</span>
-            <div className="flex-grow">
-              <Slider
-                value={monthlyIncome}
-                onChange={handleIncomeSliderChange}
-                min={100}
-                max={100000}
-                aria-labelledby="income-slider"
-                color="primary"
-              />
-              <div className="flex justify-between mt-1">
-                <span className="text-xs text-gray-500">100 zł</span>
-                <span className="text-xs text-gray-500">100 000 zł</span>
-              </div>
-            </div>
+            
+            <RadioGroup 
+              row 
+              value={incomeFrequency} 
+              onChange={handleIncomeFrequencyChange}
+            >
+              <FormControlLabel value="monthly" control={<Radio color="primary" />} label="Miesięcznie" />
+              <FormControlLabel value="daily" control={<Radio color="primary" />} label="Dziennie" />
+              <FormControlLabel value="hourly" control={<Radio color="primary" />} label="Godzinowo" />
+            </RadioGroup>
           </div>
         </div>
         
@@ -222,27 +246,20 @@ const B2BSalaryCalculator: React.FC = () => {
             <span className="ml-2 inline-block w-5 h-5 rounded-full bg-gray-200 text-center text-gray-500 text-xs">i</span>
           </div>
           <div className="flex items-center">
-            <input
-              type="number"
+
+            <select
               value={taxRate}
               onChange={handleTaxRateChange}
-              className="w-32 p-3 border border-gray-300 rounded-md mr-3"
-            />
-            <span className="mr-4">%</span>
-            <div className="flex-grow">
-              <Slider
-                value={taxRate}
-                onChange={handleTaxRateSliderChange}
-                min={2}
-                max={17}
-                step={null}
-                marks={taxRates.map(rate => ({ value: rate, label: `${rate}%` }))}
-                aria-labelledby="tax-rate-slider"
-                color="primary"
-              />
-            </div>
+              className="p-3 border border-gray-300 rounded-md bg-white text-gray-700"
+            >
+              {[2, 3, 5.5, 8.5, 10, 12, 12.5, 14, 15, 17].map((rate) => (
+                <option key={rate} value={rate}>
+                  {rate}%
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
+</div>
         
         {/* ZUS Type */}
         <div className="mb-8">
@@ -258,57 +275,26 @@ const B2BSalaryCalculator: React.FC = () => {
           </RadioGroup>
         </div>
         
-        {/* Optional Fields */}
-        <div className="mb-4">
-          <div className="flex items-center mb-6">
-            <label className="block text-gray-600 w-40">Dochód z innych źródeł</label>
-            <input
-              type="number"
-              value={otherIncome}
-              onChange={handleOtherIncomeChange}
-              className="w-40 p-3 border border-gray-300 rounded-md ml-auto"
-            />
-          </div>
-          
-          <div className="flex items-center mb-6">
-            <label className="block text-gray-600 w-40">Liczba Dzieci</label>
-            <FormControl className="w-40 ml-auto">
-              <Select
-                value={children}
-                onChange={handleChildrenChange}
-                className="rounded-md"
-              >
-                <MenuItem value={0}>0</MenuItem>
-                <MenuItem value={1}>1</MenuItem>
-                <MenuItem value={2}>2</MenuItem>
-                <MenuItem value={3}>3</MenuItem>
-                <MenuItem value={4}>4</MenuItem>
-                <MenuItem value={5}>5+</MenuItem>
-              </Select>
-            </FormControl>
-          </div>
-          
-          <div className="flex items-center mb-6">
-            <label className="block text-gray-600">Rozliczenie z małżonkiem</label>
-            <RadioGroup 
-              row 
-              value={jointFiling ? "tak" : "nie"} 
-              onChange={handleJointFilingChange}
-              className="ml-auto"
-            >
-              <FormControlLabel value="tak" control={<Radio color="primary" />} label="Tak" />
-              <FormControlLabel value="nie" control={<Radio color="primary" />} label="Nie" />
-            </RadioGroup>
-          </div>
-          
-          <button 
-            onClick={() => setShowMore(!showMore)} 
-            className="text-blue-500 flex items-center justify-center w-full"
+        {/* Voluntary Health Insurance */}
+        <div className="mb-8">
+          <label className="block text-gray-600 mb-2">Dobrowolne ubezpieczenie chorobowe (2,45% podstawy wymiaru składki zdrowotnej)</label>
+          <RadioGroup 
+            row 
+            value={voluntaryHealthInsurance ? "tak" : "nie"} 
+            onChange={handleVoluntaryHealthInsuranceChange}
           >
-            {showMore ? "Pokaż mniej opcji" : "Pokaż więcej opcji"}
-            <span className={`ml-2 inline-block transform ${showMore ? 'rotate-180' : ''}`}>▲</span>
-          </button>
+            <FormControlLabel value="tak" control={<Radio color="primary" />} label="Tak" />
+            <FormControlLabel value="nie" control={<Radio color="primary" />} label="Nie" />
+          </RadioGroup>
         </div>
+        
+        <button 
+          onClick={() => setShowMore(!showMore)} 
+          className="text-blue-500 flex items-center justify-center w-full"
+        >
+          {showMore ? "Pokaż mniej opcji" : "Pokaż więcej opcji"}
+          <span className={`ml-2 inline-block transform ${showMore ? 'rotate-180' : ''}`}>▲</span>
+        </button>
       </div>
       
       {/* Results Section */}
