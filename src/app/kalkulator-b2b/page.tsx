@@ -46,10 +46,10 @@ const B2BSalaryCalculator: React.FC = () => {
     const costs = Number(monthlyCosts);
     const profit = monthlyIncome - costs;
     
-    // Simplified tax calculations based on the provided information
-    const generalTax = calculateGeneralTax(profit, monthlyIncome, zusType, taxationType);
-    const linearTax = calculateLinearTax(profit, monthlyIncome, zusType, taxationType);
-    const flatRateTax = calculateFlatRateTax(monthlyIncome, taxRate, zusType, taxationType);
+    // Przekazywanie odpowiednich wartości do funkcji obliczeniowych
+    const generalTax = calculateGeneralTax(profit, monthlyIncome, zusType, 'scale');
+    const linearTax = calculateLinearTax(profit, monthlyIncome, zusType, 'flat');
+    const flatRateTax = calculateFlatRateTax(monthlyIncome, taxRate, zusType, 'lumpSum');
     
     setResults({
       general: Math.round(profit - generalTax),
@@ -62,13 +62,28 @@ const B2BSalaryCalculator: React.FC = () => {
   const calculateZUS = (income: number, zusType: ZusType, taxationType: string): number => {
     let zus = 0;
     let healthInsurance = 0;
+    let voluntaryInsurance = 0;
   
+    // Określ podstawę wymiaru składki na ubezpieczenie chorobowe
+    let basis = 0;
+    
     if (zusType === 'duzy') {
       // Duży ZUS: składki na ubezpieczenia społeczne (bez zdrowotnej)
-      zus = 1418.48; // Suma składek emerytalnej, rentowej, chorobowej, wypadkowej, FP i FS
+      zus = 1418.48; // Suma składek emerytalnej, rentowej, wypadkowej, FP i FS
+      basis = 4300; // Podstawa wymiaru dla dużego ZUS
     } else if (zusType === 'maly') {
       // Mały ZUS: preferencyjne składki społeczne
       zus = 331.26;
+      basis = 1047.50; // Podstawa wymiaru dla małego ZUS
+    } else if (zusType === 'zdrowie') {
+      // Tylko składka zdrowotna - brak składek społecznych
+      zus = 0;
+      basis = 0; // Brak podstawy do dobrowolnego ubezpieczenia chorobowego
+    }
+    
+    // Dobrowolne ubezpieczenie chorobowe (2,45% podstawy wymiaru)
+    if (voluntaryHealthInsurance && basis > 0) {
+      voluntaryInsurance = basis * 0.0245;
     }
   
     // Składka zdrowotna dla przedsiębiorców na skali podatkowej: min. 381.78 PLN (9% od minimalnego wynagrodzenia)
@@ -91,7 +106,7 @@ const B2BSalaryCalculator: React.FC = () => {
       healthInsurance = 381.78;
     }
   
-    return zus + healthInsurance;
+    return zus + healthInsurance + voluntaryInsurance;
   };
 
   // Simplified tax calculation functions
@@ -110,8 +125,8 @@ const B2BSalaryCalculator: React.FC = () => {
     }
     
     // ZUS contribution based on selection
-    const zus = calculateZUS(income, zusType, taxationType);
-    
+    const zus = calculateZUS(income, zusType, 'scale');
+  
     return (tax / 12) + zus;
   };
 
@@ -120,7 +135,7 @@ const B2BSalaryCalculator: React.FC = () => {
     const tax = profit * 0.19;
     
     // ZUS contribution based on selection
-    const zus = calculateZUS(income, zusType, taxationType);
+    const zus = calculateZUS(income, zusType, 'flat');
     
     return tax + zus;
   };
@@ -130,7 +145,7 @@ const B2BSalaryCalculator: React.FC = () => {
     const tax = income * (rate / 100);
     
     // ZUS contribution based on selection
-    const zus = calculateZUS(income, zusType, taxationType);
+    const zus = calculateZUS(income, zusType, 'lumpSum');
     
     return tax + zus;
   };
@@ -243,7 +258,6 @@ const B2BSalaryCalculator: React.FC = () => {
         <div className="mb-8">
           <div className="flex items-center mb-2">
             <label className="text-gray-600">Stawka ryczałtu</label>
-            <span className="ml-2 inline-block w-5 h-5 rounded-full bg-gray-200 text-center text-gray-500 text-xs">i</span>
           </div>
           <div className="flex items-center">
 
@@ -259,7 +273,7 @@ const B2BSalaryCalculator: React.FC = () => {
               ))}
             </select>
           </div>
-</div>
+        </div>
         
         {/* ZUS Type */}
         <div className="mb-8">
@@ -288,13 +302,6 @@ const B2BSalaryCalculator: React.FC = () => {
           </RadioGroup>
         </div>
         
-        <button 
-          onClick={() => setShowMore(!showMore)} 
-          className="text-blue-500 flex items-center justify-center w-full"
-        >
-          {showMore ? "Pokaż mniej opcji" : "Pokaż więcej opcji"}
-          <span className={`ml-2 inline-block transform ${showMore ? 'rotate-180' : ''}`}>▲</span>
-        </button>
       </div>
       
       {/* Results Section */}
@@ -304,7 +311,6 @@ const B2BSalaryCalculator: React.FC = () => {
         <div className="border-b border-gray-200 py-4 flex justify-between items-center">
           <div className="flex items-center">
             <span>Zasady ogólne</span>
-            <span className="ml-2 inline-block w-5 h-5 rounded-full bg-gray-200 text-center text-gray-500 text-xs">i</span>
           </div>
           <span className="font-bold">{results.general.toLocaleString('pl-PL')} zł</span>
         </div>
@@ -317,7 +323,6 @@ const B2BSalaryCalculator: React.FC = () => {
         <div className="py-4 flex justify-between items-center">
           <div className="flex items-center">
             <span>Ryczałt</span>
-            <span className="ml-2 inline-block w-5 h-5 rounded-full bg-gray-200 text-center text-gray-500 text-xs">i</span>
           </div>
           <span className="font-bold">{results.flatRate.toLocaleString('pl-PL')} zł</span>
         </div>
