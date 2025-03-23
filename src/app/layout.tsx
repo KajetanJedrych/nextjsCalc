@@ -9,6 +9,7 @@ import Script from 'next/script'
 const inter = Inter({ subsets: ['latin', 'latin-ext'], display: 'swap' })
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://kalkulatory.org"),
   title: {
     template: '%s | Kalkulatory Online',
     default: 'Kalkulatory Online - Oblicz Wynagrodzenie, Składki IKE i IKZE',
